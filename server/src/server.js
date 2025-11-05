@@ -1,3 +1,4 @@
+// server/src/server.js
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -21,6 +22,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// ---------- CORS ----------
 const DEV_ORIGINS = [
   "http://127.0.0.1:5173",
   "http://localhost:5173",
@@ -41,38 +43,49 @@ app.use(
   })
 );
 
+// ---------- Common middleware ----------
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
 app.use(attachUser);
 
-
+// Static uploads
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-// Health check
-app.get("/api", (_req, res) => res.json({ ok: true, app: "DineSphere API" }));
+// ---------- Health checks ----------
+app.get("/health", (_req, res) => res.json({ ok: true, app: "DineSphere API" }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, app: "DineSphere API" }));
 
-// Mount routes
+// ---------- Routes ----------
 app.use("/api/auth", authRouter);
 app.use("/api/categories", categoriesRouter);
 app.use("/api/menuitems", menuItemsRouter);
 app.use("/api/reservations", reservationsRouter);
 app.use("/api/tables", tablesRouter);
 
-app.use((err, req, res, _next) => {
+// ---------- Error handler ----------
+app.use((err, _req, res, _next) => {
   console.error(err);
-  res
-    .status(err.status || 500)
-    .json({ message: err.message || "Internal Server Error" });
+  res.status(err.status || 500).json({ message: err.message || "Internal Server Error" });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => console.log(`API on http://0.0.0.0:${PORT}`));
-const PORT = Number(process.env.PORT || 5000);
-(async () => {
-  await connectDB(process.env.MONGODB_URI);
-  app.listen(PORT, "0.0.0.0", () =>
-    console.log(`API on http://127.0.0.1:${PORT}`)
-  );
-})();
+// ---------- Start server ----------
+const PORT = Number(process.env.PORT ?? 5000);
+const HOST = "0.0.0.0";
+
+async function start() {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    console.log("MongoDB connected");
+    app.listen(PORT, HOST, () => {
+      console.log(`API on http://${HOST}:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Startup error:", err);
+    process.exit(1);
+  }
+}
+
+start();
+
+export default app;
