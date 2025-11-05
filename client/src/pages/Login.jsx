@@ -1,6 +1,8 @@
 import { useState } from "react";
+const API = import.meta.env.VITE_API_URL;
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+
 
 export default function Login() {
   const { login, setError } = useAuth();
